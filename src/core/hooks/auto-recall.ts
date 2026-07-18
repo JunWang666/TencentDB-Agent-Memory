@@ -147,7 +147,13 @@ async function performAutoRecallInner(params: {
   }
   const tSceneEnd = performance.now();
 
-  if (memoryLines.length === 0 && !personaContent && !sceneNavigation) {
+  // Tool availability is determined by plugin configuration, not by whether
+  // this turn happened to recall any memory. Keep the guide in stableContext
+  // whenever the corresponding tools are registered so prompt-cache prefixes
+  // do not fluctuate between recall hits and misses.
+  const includeMemoryToolsGuide = cfg.recall.enabled || cfg.capture.enabled;
+
+  if (memoryLines.length === 0 && !personaContent && !sceneNavigation && !includeMemoryToolsGuide) {
     const totalMs = performance.now() - tRecallStart;
     logger?.info(
       `${TAG} ⏱ Recall timing: total=${totalMs.toFixed(0)}ms, ` +
@@ -189,7 +195,7 @@ async function performAutoRecallInner(params: {
   // Append memory tools usage guide to the stable part so the agent knows
   // how to actively retrieve deeper context when the injected snippets
   // are not enough. This is static content and benefits from caching.
-  if (stableParts.length > 0 || dynamicContext) {
+  if (includeMemoryToolsGuide) {
     stableParts.push(MEMORY_TOOLS_GUIDE);
   }
 
